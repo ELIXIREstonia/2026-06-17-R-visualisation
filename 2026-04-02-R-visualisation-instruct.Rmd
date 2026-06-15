@@ -1,0 +1,611 @@
+---
+title: "R Visualisation with ggplot2"
+author: "Priit Adler, Nurlan Kerimov"
+date: "2026-04-02"
+output: html_document
+editor_options:
+  markdown:
+    wrap: 80
+---
+
+```{r setup, include=FALSE}
+library(knitr)
+library(ggplot2)
+library(dplyr)
+library(patchwork)  # for combining multiple plots into one layout
+library(tibble)
+
+opts_chunk$set(echo = TRUE, message = FALSE, warning = FALSE)
+
+cars <- mtcars %>%
+  rownames_to_column(var = "car") %>%   # move row names (car models) into a real column
+  mutate(
+    cyl = factor(cyl),                  # treat cylinder count as a category, not a number
+    gear = factor(gear),                # same for number of gears
+    am = factor(am, levels = c(0, 1), labels = c("Automatic", "Manual"))  # give 0/1 readable labels
+  )
+```
+
+## About this course
+
+This course focuses on data visualisation with `ggplot2`, a popular R package
+for building plots layer by layer. It is one of the most widely used and
+powerful graphics packages in the R ecosystem. By learning `ggplot2`, you will
+gain the ability to create professional, publication-quality plots that are
+essential for data analysis and communication.
+
+## Prerequisites
+
+Before starting this session, learners should already be comfortable with:
+
+-   basic R and RStudio use
+-   running code chunks in R Markdown
+-   tidy data
+-   factors
+-   categorical and continuous variables
+-   small table operations such as `select()`, `filter()`, `mutate()`,
+    `group_by()`, and `summarise()`
+
+If you want a quick refresher on those ideas, use the `2026-04-02-R-warmup.Rmd`
+document first.
+
+## Data
+
+We need data in order to visualise it. In `ggplot2`, data is the input that
+tells the plot, "this is the table we will use to create the visualisation."
+Before making a chart, it helps to know what the rows represent and what kind of
+variables the columns contain.
+
+Throughout this course, we use a slightly modified version of the built-in
+`mtcars` dataset — see the `cars` dataframe below.
+
+```{r}
+glimpse(cars)
+```
+
+The main variables we will reuse are:
+
+-   `mpg`: miles per gallon
+-   `wt`: car weight in 1000 lb
+-   `hp`: horsepower
+-   `cyl`, `gear`, and `am`: categories that are useful for grouping and colour
+
+Good plots start with understanding the dataset: what each row represents, which
+variables are continuous, and which variables should be treated as categories.
+
+For the rest of the course, we use the cleaned dataset `cars` rather than the
+raw `mtcars` table.
+
+## Your first plot
+
+Before we break a plot into parts, it helps to see one complete example.
+
+```{r}
+ggplot(cars, aes(x = wt, y = mpg, color = am)) +
+  geom_point(size = 3)
+```
+
+Don't worry about the details yet — we will cover each piece step by step. For
+now, notice three things:
+
+-   we gave `ggplot()` some data (`cars`)
+-   we told it what to put on each axis and how to colour the points (`aes(...)`)
+-   we chose a shape to draw (`geom_point()`)
+
+Everything else in this course builds on these three ideas.
+
+## Grammar of graphics
+
+![](https://ggplot2.tidyverse.org/articles/ggplot2_files/figure-html/overview_graphic-1.png)
+
+Source: <https://ggplot2.tidyverse.org/articles/ggplot2.html>
+
+The `ggplot2` introduction describes a plot as seven composable parts:
+
+-   data: the table we want to visualise
+-   mapping: how variables are linked to aesthetics such as x, y, colour, or
+    size
+-   layers: what gets drawn, including the geom, the statistical transformation,
+    and the position adjustment
+-   scales: how values become axes, legend entries, colours, or sizes
+-   facets: ways to split a dataset into multiple small panels
+-   coordinates: the system that interprets position, such as Cartesian
+    coordinates
+-   theme: the non-data styling around the plot
+
+Here is how the first plot we saw maps to these grammar components:
+
+```r
+ggplot(cars,                          # data
+       aes(x = wt, y = mpg,          # mapping
+           color = am)) +
+  geom_point(size = 3)               # layer (geom)
+```
+
+The remaining components — scales, labels, and theme — use sensible defaults
+but can be customised, as we will see in later sections.
+
+This course keeps that full picture in mind, but we will focus on the parts that
+beginners need most often.
+
+## Mapping
+
+Mapping connects variables in the dataset to what we see on screen. It tells
+`ggplot2` which column should control the x-axis, the y-axis, the colour, the
+size, or another visual property. Common aesthetics include `x`, `y`, `color`,
+`fill`, `shape`, and `size`.
+
+```{r}
+ggplot(cars, aes(x = wt, y = mpg, color = am)) +  # wt -> x, mpg -> y, am -> colour
+  geom_point(size = 3) +
+  labs(color = "Transmission")  # labs() adds readable labels; we cover it in detail later
+```
+
+Here, `wt` is mapped to the x-axis, `mpg` to the y-axis, and `am` to colour.
+
+In practice, mapping means asking questions like:
+
+-   which variable goes on the x-axis?
+-   which variable goes on the y-axis?
+-   should colour represent a category or a number?
+
+### Mapping versus setting
+
+When an aesthetic belongs to the data, put it inside `aes()`. When you want a
+fixed value, set it outside `aes()`.
+
+```{r}
+mapped_plot <- ggplot(cars, aes(x = wt, y = mpg, color = am)) +  # color inside aes() = data-driven
+  geom_point(size = 3) +
+  labs(title = "Colour mapped to a variable", color = "Transmission")
+
+mapped_plot
+```
+
+```{r}
+set_plot <- ggplot(cars, aes(x = wt, y = mpg)) +
+  geom_point(size = 3, color = "steelblue") +  # color outside aes() = fixed value for all points
+  labs(title = "Colour set to a fixed value")
+
+set_plot
+```
+
+You can also map more than one aesthetic at the same time.
+
+```{r}
+ggplot(cars, aes(x = wt, y = mpg, color = am, shape = cyl)) +  # two aesthetics mapped at once
+  geom_point(size = 3)
+```
+
+### Task
+
+Create a scatter plot of `disp` vs `hp`, map `color` to `cyl`, and set point
+size to `3`.
+
+```{r}
+ggplot(cars, aes(x = disp, y = hp, color = cyl)) +  # cyl mapped to color (inside aes)
+  geom_point(size = 3) +                             # size set to fixed value (outside aes)
+  labs(color = "Cylinders")                          # rename the colour legend
+```
+
+Expected result: a scatter plot where cylinder groups are distinguished by
+colour while point size stays fixed.
+
+Note: this task is useful for checking whether you understand the
+difference between mapping a variable and setting a constant.
+
+Additional reading:
+[ggplot2 geoms reference](https://ggplot2.tidyverse.org/reference/index.html#geoms),
+[From Data to Viz](https://data-to-viz.com/).
+
+## Layers
+
+Layers are where the plot becomes visible. In `ggplot2`, a layer can include a
+geom, a statistical transformation, and a position adjustment. In simple terms,
+layers tell `ggplot2` what to draw on top of the data, such as points, bars,
+boxes, or smooth lines.
+
+### Choosing geoms
+
+Different geoms are useful for different variable types. With the same dataset,
+we can make several valid plots by changing only the geom.
+
+```{r}
+scatter_geom <- ggplot(cars, aes(x = wt, y = mpg)) +
+  geom_point(color = "steelblue", size = 3) +
+  labs(title = "geom_point()")
+
+scatter_geom
+```
+
+```{r}
+hist_geom <- ggplot(cars, aes(x = mpg)) +
+  geom_histogram(binwidth = 2, fill = "tomato", color = "white") +  # binwidth controls bar width; color is bar border
+  labs(title = "geom_histogram()")
+
+hist_geom
+```
+
+Note: `color` controls outlines and the colour of points and lines. `fill`
+controls the inside area of shapes like bars, boxes, and tiles. You will see
+this distinction throughout the course.
+
+```{r}
+bar_geom <- ggplot(cars, aes(x = cyl)) +
+  geom_bar(fill = "grey40") +   # geom_bar() counts rows per category automatically
+  labs(title = "geom_bar()", x = "Cylinders")
+
+bar_geom
+```
+
+```{r}
+box_geom <- ggplot(cars, aes(x = cyl, y = mpg)) +
+  geom_boxplot(fill = "khaki") +
+  labs(title = "geom_boxplot()", x = "Cylinders")
+
+box_geom
+```
+
+```{r}
+line_geom <- ggplot(cars %>% arrange(wt), aes(x = wt, y = mpg)) +
+  geom_line(color = "steelblue", linewidth = 0.8) +
+  labs(title = "geom_line()")
+
+line_geom
+```
+
+`geom_line()` connects observations in the order they appear in the data. Here
+we first sort the data by weight with `arrange(wt)` so that the line runs from
+left to right. 
+
+As a rule of thumb:
+
+-   use scatter plots for two continuous variables
+-   use histograms for one continuous variable
+-   use bar plots for counts of categories
+-   use box plots when comparing a continuous variable across categories
+-   use line plots to show trends across an ordered variable
+
+### Adding more than one layer
+
+One of the strengths of `ggplot2` is that you can add more than one layer to the
+same plot.
+
+Lets check the difference between a line plot with and without points (as above):
+```{r}
+line_geom <- ggplot(cars %>% arrange(wt), aes(x = wt, y = mpg)) +
+  geom_line(color = "steelblue", linewidth = 0.8) +
+  geom_point(color = "steelblue", size = 2) + 
+  #Adding `geom_point()` on top makes individual cars visible.
+  labs(title = "geom_line()")
+
+line_geom
+```
+
+
+### Box plot with jittered points
+
+```{r}
+ggplot(cars, aes(x = gear, y = mpg)) +
+  geom_boxplot(fill = "grey85", outlier.shape = NA) +  # hide outlier dots so jitter shows all cars
+  geom_jitter(aes(color = am), width = 0.15, size = 2.5, alpha = 0.85) +  # color = am only applies to this geom
+  labs(x = "Gears", y = "Miles per gallon", color = "Transmission") +
+  theme_minimal()
+```
+
+Note: Aesthetics defined in `ggplot(aes(...))` are inherited by every layer. However,
+each geom can add or override aesthetics in its own `aes()` call. In the example
+below, `x = gear` and `y = mpg` are shared by both layers, but only
+`geom_jitter()` maps `color = am` — so the box plots stay a single colour while
+the points are coloured by transmission.
+
+
+The jittered points show the individual cars, while the box plot shows the
+summary distribution for each gear group.
+
+### Scatter plot with a trend line and labels
+
+```{r}
+ggplot(cars, aes(x = wt, y = mpg)) +
+  geom_point(aes(color = am), size = 3) +
+  geom_smooth(method = "lm", se = FALSE, color = "black", linewidth = 0.8) +  # lm = linear trend line; se = FALSE hides confidence ribbon
+  geom_text(
+    data = cars %>% filter(mpg > 30 | wt > 5),  # only label the extreme/interesting cars
+    aes(label = car),
+    check_overlap = TRUE,  # skip labels that would overlap each other
+    nudge_y = 1,           # shift labels slightly above their points
+    size = 3
+  ) +
+  labs(color = "Transmission")
+```
+
+### Task
+
+Build a plot of `hp` by `cyl` that combines `geom_boxplot()` and
+`geom_jitter()`. Colour the points by `gear`.
+
+```{r}
+ggplot(cars, aes(x = cyl, y = hp)) +
+  geom_boxplot(fill = "grey85", outlier.shape = NA) +       # hide outlier dots; jitter will show all points
+  geom_jitter(aes(color = gear), width = 0.15, size = 2.5, alpha = 0.85) +  # color mapped per-geom, not inherited
+  labs(x = "Cylinders", y = "Horsepower", color = "Gears")
+```
+
+Expected result: a layered plot that shows both the horsepower distribution per
+cylinder group and the individual observations coloured by number of gears.
+
+## Scales
+
+Scales control how values are translated into positions, colours, fills, and
+labels. They help turn raw values into readable axes and legends, and they let
+us control breaks, labels, ordering, and colour palettes.
+
+### Numeric scales
+
+Numeric scales are useful when you want cleaner breaks or more readable axes.
+
+```{r}
+numeric_default <- ggplot(cars, aes(x = hp, y = mpg)) +
+  geom_point(size = 3, color = "grey40") +
+  labs(title = "Default numeric scales")
+
+numeric_default
+```
+
+`scale_x_continuous()` and `scale_y_continuous()` let you control how numeric
+axes behave. The most common use is the `breaks` argument, which sets where the
+tick marks appear. Here we use `seq()` to generate evenly spaced positions.
+
+```{r}
+numeric_scaled <- ggplot(cars, aes(x = hp, y = mpg)) +
+  geom_point(size = 3, color = "grey40") +
+  scale_x_continuous(breaks = seq(50, 350, by = 50)) +  # seq() generates tick positions: 50, 100, 150 ...
+  scale_y_continuous(breaks = seq(10, 35, by = 5)) +
+  labs(title = "Custom numeric breaks")
+
+numeric_scaled
+```
+
+### Discrete scales and factor order
+
+Ordering categories can change the story a plot tells. Here the first box plot
+uses the default factor order, while the second sets a new order manually.
+
+```{r}
+default_order_plot <- ggplot(cars, aes(x = factor(cyl), y = mpg)) +
+  geom_boxplot(fill = "grey80") +
+  labs(title = "Default order", x = "Cylinders")
+
+default_order_plot
+```
+
+```{r}
+reordered_plot <- ggplot(cars, aes(x = factor(cyl, levels = c("8", "6", "4")), y = mpg)) +  # set the category order directly
+  geom_boxplot(fill = "tomato") +
+  labs(title = "Manually reordered", x = "Cylinders")
+
+reordered_plot
+```
+
+This is the point where factor handling matters directly for visualisation.
+
+Note: this example now changes the x-axis order visibly from `4, 6, 8`
+to `8, 6, 4`, which makes the reason for reordering much clearer.
+
+You can also control discrete axes with `scale_x_discrete()`. The `limits`
+argument sets the order of categories, and the `labels` argument renames them.
+
+```{r}
+ggplot(cars, aes(x = cyl, y = mpg)) +
+  geom_boxplot(fill = "orchid") +
+  scale_x_discrete(
+    limits = c("8", "6", "4"),                       # set the display order
+    labels = c("8-cyl", "6-cyl", "4-cyl")            # rename the tick labels
+  ) +
+  labs(title = "Relabelled with scale_x_discrete()", x = "Cylinders")
+```
+
+### Colour scales and fill scales
+
+Use `color` for points and lines. Use `fill` for objects with an inside area,
+such as bars, tiles, and box plots.
+
+```{r}
+color_scale_plot <- ggplot(cars, aes(x = wt, y = mpg, color = hp)) +
+  geom_point(size = 4) +
+  scale_color_gradient(low = "skyblue", high = "firebrick") +  # low hp = blue, high hp = red
+  labs(title = "Continuous colour scale", color = "Horsepower")
+
+color_scale_plot
+```
+
+```{r}
+mean_mpg_by_cyl_gear <- cars %>%
+  group_by(cyl, gear) %>%
+  summarise(mean_mpg = mean(mpg), .groups = "drop")  # .groups = "drop" removes grouping after summarise
+```
+
+```{r}
+fill_scale_plot <- ggplot(mean_mpg_by_cyl_gear, aes(x = cyl, y = gear, fill = mean_mpg)) +
+  geom_tile(color = "white", linewidth = 0.8) +                          # color here is the tile border, not fill
+  geom_text(aes(label = round(mean_mpg, 1)), color = "white", fontface = "bold") +  # overlay value labels on tiles
+  scale_fill_gradient(low = "khaki1", high = "darkgreen") +
+  labs(
+    title = "Continuous fill scale",
+    x = "Cylinders",
+    y = "Gears",
+    fill = "Mean mpg"
+  )
+
+fill_scale_plot
+```
+
+Note: this section deliberately separates `scale_color_gradient()` and
+`scale_fill_gradient()` so you can see the correct use case for each one.
+
+### Task
+
+Create a scatter plot of `wt` versus `mpg` where `hp` is mapped to colour.
+Use `scale_color_gradient()` to set a gradient from `"gold"` to `"purple"`,
+and set custom x-axis breaks at every 1000 lb with `scale_x_continuous()`.
+
+```{r}
+ggplot(cars, aes(x = wt, y = mpg, color = hp)) +
+  geom_point(size = 3) +
+  scale_color_gradient(low = "gold", high = "purple") +
+  scale_x_continuous(breaks = seq(1, 6, by = 1)) +
+  labs(color = "Horsepower", x = "Weight (1000 lb)", y = "Miles per gallon")
+```
+
+Expected result: a scatter plot with a gold-to-purple colour gradient and
+evenly spaced x-axis ticks.
+
+## Labels and titles
+
+Now that you know how to build a plot from data, mapping, layers, and scales,
+it is time to add human-readable labels. You have already seen `labs()` used
+in earlier examples. Here is a closer look at what it can do.
+
+`labs()` sets the title, subtitle, caption, axis names, and legend titles for
+a plot.
+
+```{r}
+ggplot(cars, aes(x = wt, y = mpg, color = am)) +
+  geom_point(size = 3) +
+  labs(
+    title = "Fuel efficiency and car weight",
+    subtitle = "Heavier cars tend to use more fuel",
+    x = "Weight (1000 lb)",
+    y = "Miles per gallon",
+    color = "Transmission",
+    caption = "Data source: mtcars"
+  )
+```
+
+Each argument in `labs()` targets a specific part of the plot:
+
+-   `title` and `subtitle` appear at the top
+-   `x` and `y` rename the axis labels
+-   `color`, `fill`, `shape`, or `size` rename the corresponding legend
+-   `caption` adds a note at the bottom right
+
+## Theme
+
+Polishing matters. A plot becomes easier to read when it has a clear title,
+useful axis labels, and a consistent theme. The theme controls the visual style
+around the data, such as fonts, grid lines, legend position, and background
+appearance.
+
+```{r}
+styled_plot <- ggplot(cars, aes(x = wt, y = mpg, color = am)) +
+  geom_point(size = 3) +
+  labs(
+    title = "Heavier cars tend to have lower fuel efficiency",
+    subtitle = "Transmission highlights one part of the pattern in mtcars",
+    x = "Weight (1000 lb)",
+    y = "Miles per gallon",
+    color = "Transmission"
+  ) +
+  theme_minimal(base_size = 12) +  # clean background; base_size scales all text proportionally
+  theme(legend.position = "top")   # move legend above the plot
+
+styled_plot
+```
+
+We will not cover coordinates or native faceting functions (such as
+`facet_wrap()` or `facet_grid()`) in this course. However, to show how different
+plots can be combined, we will use the `patchwork` package to arrange multiple
+independent plots into a single layout.
+
+## Patchwork
+
+The `patchwork` package makes it easy to combine several ggplots into one
+layout. Instead of relying on native faceting in this course, we use `patchwork`
+to place separate plots next to each other or stack them into a single figure.
+
+The two basic operators are:
+
+-   `|` places plots side by side
+-   `/` stacks plots vertically
+
+```{r}
+scatter_geom | hist_geom  # side by side
+```
+
+```{r}
+scatter_geom / box_geom  # stacked
+```
+
+You can combine both operators and add annotations to build more complex
+layouts.
+
+```{r}
+dashboard_plot <- (styled_plot / (reordered_plot | fill_scale_plot)) +  # / stacks rows; inner | places side by side
+  plot_annotation(
+    title = "Three views of the mtcars dataset",
+    subtitle = "Scatter plot, reordered box plot, and summary heatmap",
+    caption = "Data source: mtcars"
+  ) +
+  plot_layout(guides = "collect")  # merge duplicate legends into one shared legend
+
+dashboard_plot
+```
+
+## Exporting plots with `ggsave()`
+
+`ggsave()` writes a plot to a file. In this example we save to temporary files
+so that knitting the document does not clutter the course folder.
+
+```{r}
+png_file <- tempfile("mtcars-plot-", fileext = ".png")  # tempfile() creates a safe throwaway path
+pdf_file <- tempfile("mtcars-plot-", fileext = ".pdf")
+
+ggsave(filename = png_file, plot = styled_plot, width = 8, height = 5, dpi = 300)  # dpi = resolution; 300 is print quality
+ggsave(filename = pdf_file, plot = styled_plot, width = 8, height = 5)             # PDF is vector so dpi is irrelevant
+
+png_file  # print the path so you can inspect the saved file
+pdf_file
+```
+
+When you make your own report, replace `tempfile()` with a real filename such as
+`"my-figure.png"`.
+
+## Final task
+
+Create a two-panel figure about fuel efficiency in `mtcars`.
+
+Requirements:
+
+-   one panel should use two continuous variables
+-   one panel should use a categorical x-axis
+-   choose at least one scale intentionally
+-   add meaningful labels or a title
+
+```{r}
+fuel_scatter <- ggplot(cars, aes(x = wt, y = mpg, color = hp)) +
+  geom_point(size = 3) +
+  scale_color_gradient(low = "lightblue", high = "darkred") +  # encodes a third variable (hp) through colour
+  labs(
+    title = "Fuel efficiency vs weight",
+    x = "Weight (1000 lb)",
+    y = "Miles per gallon",
+    color = "Horsepower"
+  )
+
+fuel_boxplot <- ggplot(cars, aes(x = factor(cyl, levels = c("4", "6", "8")), y = mpg, fill = am)) +
+  geom_boxplot() +
+  labs(
+    title = "Fuel efficiency by cylinder count",
+    x = "Cylinders",
+    y = "Miles per gallon",
+    fill = "Transmission"
+  )
+
+fuel_scatter | fuel_boxplot  # combine the two panels side by side
+```
+
+Expected result: a compact two-panel figure that uses both continuous and
+categorical views of the same topic.
+
+Note: it is good practice to explain why you chose your scale and
+your plot types, not only how you coded them.

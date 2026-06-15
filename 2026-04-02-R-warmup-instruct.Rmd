@@ -1,0 +1,271 @@
+---
+title: "R Warm-up for Visualisation"
+author: "Priit Adler, Nurlan Kerimov"
+date: "2026-04-02"
+output: html_document
+editor_options:
+  markdown:
+    wrap: 80
+---
+
+```{r setup, include=FALSE}
+library(knitr)
+library(dplyr)
+library(tibble)
+
+opts_chunk$set(echo = TRUE, message = FALSE, warning = FALSE)
+
+cars <- mtcars %>%
+  rownames_to_column(var = "car") %>%   # move row names (car models) into a real column
+  mutate(
+    cyl = factor(cyl),                  # treat cylinder count as a category, not a number
+    gear = factor(gear),                # same for number of gears
+    am = factor(am, levels = c(0, 1), labels = c("Automatic", "Manual"))  # give 0/1 readable labels
+  )
+```
+
+## Why this document?
+
+This warm-up is a short prerequisite companion for the ggplot2 session. Use it
+to refresh the small data operations that often happen just before plotting.
+
+## Course preconditions
+
+Before coming to the visualisation course, you should be comfortable with:
+
+-   basic R and RStudio navigation
+-   running code chunks in R Markdown
+-   the idea of tidy data
+-   the difference between categorical and continuous variables
+-   factors as stored categories
+
+If these ideas feel rusty, the quick refresher below will help.
+
+## Quick refresher
+
+### Tidy data
+
+In tidy data, every row is one observation and every column is one variable. The
+`cars` dataset is tidy: each row is one car, and each column describes a
+property of that car.
+
+### Factors
+
+A factor is how R stores categorical variables — values that belong to a fixed
+set of categories rather than being free-form numbers or text. For example, the
+`cyl` column holds only three possible values:
+
+```{r}
+levels(cars$cyl)
+```
+
+Factors matter for plotting because they control legend ordering, colour
+assignment, and axis grouping.
+
+### The pipe (`%>%`)
+
+We use the pipe operator `%>%` to chain operations — read it as "and then." For
+example, `cars %>% select(mpg)` means "take the `cars` table, and then select
+the `mpg` column." Every exercise below uses this pattern.
+
+## Meet the dataset
+
+In this warm-up we use the built-in `mtcars` dataset for every example. We've
+made a few adjustments to the data to make it more user-friendly. Now it is
+called `cars`:
+
+```{r}
+glimpse(cars)
+```
+
+The main variables we will work with are:
+
+| Column | Type        | Description                          |
+|--------|-------------|--------------------------------------|
+| `car`  | text        | car name (added during setup)        |
+| `mpg`  | continuous  | miles per gallon (fuel efficiency)   |
+| `hp`   | continuous  | gross horsepower                     |
+| `wt`   | continuous  | weight in 1000 lb                    |
+| `disp` | continuous  | engine displacement in cubic inches  |
+| `cyl`  | categorical | number of cylinders (4, 6, or 8)     |
+| `gear` | categorical | number of forward gears (3, 4, or 5) |
+| `am`   | categorical | transmission (Automatic or Manual)   |
+
+## Exercise 1: `select()`
+
+Pick a small set of columns that would be useful in a fuel-efficiency summary:
+`car`, `mpg`, `hp`, `wt`, and `am`.
+
+```{r}
+cars %>%
+  select(car, mpg, hp, wt, am) %>%  # keep only these five columns, drop the rest
+  head()                             # show the first 6 rows (default)
+```
+
+Expected result: a 6-row table with only the requested five columns.
+
+Note: remember that `select()` changes columns, not rows.
+
+## Exercise 2: `filter()`
+
+Find manual cars with more than 25 miles per gallon.
+
+```{r}
+manual_high_mpg <- cars %>%
+  filter(am == "Manual", mpg > 25)  # both conditions must be true: manual AND efficient
+
+manual_high_mpg
+```
+
+Expected result: a short table of efficient manual cars such as the Fiat 128,
+Honda Civic, and Lotus Europa.
+
+Note: filtering is useful for plotting too — for example, you might want to
+show only 4-cylinder cars or focus on one treatment group.
+
+## Exercise 3: `arrange()`
+
+Sort the data from highest to lowest fuel efficiency. If two cars have similar
+fuel efficiency, place the lighter car first.
+
+```{r}
+cars %>%
+  arrange(desc(mpg), wt) %>%  # desc() reverses order for mpg; wt stays ascending as tiebreaker
+  head(10)                     # show only the top 10 rows
+```
+
+Expected result: the most fuel-efficient cars appear first, with light cars
+breaking ties.
+
+Note: you can mix `desc()` with regular ascending ordering inside the same
+`arrange()` call.
+
+## Exercise 4: `mutate()`
+
+Create two new variables:
+
+-   `power_to_weight` = `hp / wt`
+-   `mpg_band` with values `"low"`, `"medium"`, and `"high"`
+
+Use this rule for `mpg_band`:
+
+-   `"high"` if `mpg >= 25`
+-   `"medium"` if `mpg >= 18` and `< 25`
+-   `"low"` otherwise
+
+`case_when()` checks conditions in order and returns the value for the first one
+that is true — like a series of if/else statements.
+
+```{r}
+cars_augmented <- cars %>%
+  mutate(
+    power_to_weight = hp / wt,        # derived ratio: higher means more powerful for its weight
+    mpg_band = case_when(             # case_when works like a multi-condition if/else
+      mpg >= 25 ~ "high",             # first matching condition wins
+      mpg >= 18 ~ "medium",           # only reached if mpg < 25
+      TRUE ~ "low"                    # TRUE is the catch-all fallback (like else)
+    )
+  )
+
+cars_augmented %>%
+  select(car, mpg, hp, wt, power_to_weight, mpg_band) %>%  # narrow down to relevant columns
+  head(10)
+```
+
+Expected result: the output includes one continuous derived variable and one
+categorical variable.
+
+Note: creating categories like `mpg_band` is a natural bridge to plotting —
+you will often use derived variables like this for colour or grouping.
+
+## Exercise 5: `group_by()` + `summarise()`
+
+Create a summary table by number of cylinders. Include:
+
+-   number of cars
+-   mean `mpg`
+-   mean `hp`
+
+```{r}
+cars %>%
+  group_by(cyl) %>%          # split into groups: one per cylinder count (4, 6, 8)
+  summarise(
+    n_cars = n(),             # n() counts rows in each group
+    mean_mpg = mean(mpg),
+    mean_hp = mean(hp)
+  )
+```
+
+Expected result: one row each for 4, 6, and 8 cylinders.
+
+Note: `count(cyl)` is a handy shortcut for
+`group_by(cyl) %>% summarise(n = n())` when you only need counts.
+
+Note: summarised tables like this are perfect raw material for bar plots, line
+plots, and heatmaps in the visualisation course.
+
+## Exercise 6: grouped summary with two variables
+
+Create a summary table by transmission and cylinders. This is the kind of table
+that later becomes a bar plot, box plot, or heatmap.
+
+Include:
+
+-   `am`
+-   `cyl`
+-   mean `mpg`
+-   mean `wt`
+
+```{r}
+summary_by_transmission <- cars %>%
+  group_by(am, cyl) %>%          # group by two variables: one row per unique am+cyl combination
+  summarise(
+    mean_mpg = mean(mpg),
+    mean_wt = mean(wt)
+  )
+
+summary_by_transmission          # print the saved result
+```
+
+Expected result: a compact summary table with one row per transmission and
+cylinder combination.
+
+Note: this exact table shape is what many plotting geoms expect as input.
+
+## Exercise 7: creating a factor
+
+The `vs` column is stored as a number (0 or 1) but it actually represents a
+category: engine shape. Convert it into a factor with readable labels.
+
+0: V-shaped
+1: Straight
+
+```{r}
+cars %>%
+  mutate(
+    vs = factor(vs, levels = c(0, 1), labels = c("V-shaped", "Straight"))
+  ) %>%
+  select(car, vs, cyl, mpg) %>%
+  head()
+```
+
+Expected result: the `vs` column now shows `"V-shaped"` or `"Straight"` instead
+of 0 or 1.
+
+Note: in the visualisation course, factor conversion like this controls how
+categories appear in legends, axes, and colour assignments.
+
+## Checkpoint
+
+These small verbs show up again and again when building plots:
+
+-   `select()` helps you focus on the variables you want to show
+-   `filter()` limits the data to a relevant subset
+-   `arrange()` helps you inspect patterns before plotting
+-   `mutate()` creates variables for labels, colours, groups, or facets
+-   `group_by()` and `summarise()` create summary tables for bars, lines, and
+    heatmaps
+-   `factor()` turns numbers or text into proper categories with labels
+
+In the main visualisation course, we will assume you can read and modify tables
+at about this level.

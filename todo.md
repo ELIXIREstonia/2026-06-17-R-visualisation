@@ -1,0 +1,12 @@
+- fix mtcars in the end
+- remove data
+- ggsave filenames
+- remove .groups = drop
+- add discrete color setting (e.g. viridis)
+- add feedback link to end of material (in addition to README)
+- change patchwork example to use same plors in horizonral and vertical
+- change additional reference links position to have after geoms are explained
+- change  scale_y_continuous(breaks = seq(8, 40, by = 4)) 
+- change mpg to kmpl
+- change the am column to be called transmission
+- 
