@@ -1,11 +1,8 @@
 ---
 title: "R Warm-up for Visualisation"
 author: "Priit Adler, Nurlan Kerimov"
-date: "2026-04-02"
+date: "2026-06-17"
 output: html_document
-editor_options:
-  markdown:
-    wrap: 80
 ---
 
 ```{r setup, include=FALSE}
@@ -18,6 +15,10 @@ opts_chunk$set(echo = TRUE, message = FALSE, warning = FALSE)
 cars <- mtcars %>%
   rownames_to_column(var = "car") %>%   # move row names (car models) into a real column
   mutate(
+    consumption_l_100km = round(235.214583 / mpg, 1),   # keep mpg, add fuel consumption in L/100 km
+    weight_kg = round(wt * 1000 * 0.45359237),          # keep wt, add weight in kg
+    power_kw = round(hp * 0.745699872, 1),              # keep hp, add power in kW
+    displacement_l = round(disp * 0.016387064, 1),      # keep disp, add engine displacement in litres
     cyl = factor(cyl),                  # treat cylinder count as a category, not a number
     gear = factor(gear),                # same for number of gears
     am = factor(am, levels = c(0, 1), labels = c("Automatic", "Manual"))  # give 0/1 readable labels
@@ -65,14 +66,16 @@ assignment, and axis grouping.
 ### The pipe (`%>%`)
 
 We use the pipe operator `%>%` to chain operations — read it as "and then." For
-example, `cars %>% select(mpg)` means "take the `cars` table, and then select
-the `mpg` column." Every exercise below uses this pattern.
+example, `cars %>% select(consumption_l_100km)` means "take the `cars` table,
+and then select the `consumption_l_100km` column." Every exercise below uses
+this pattern.
 
 ## Meet the dataset
 
 In this warm-up we use the built-in `mtcars` dataset for every example. We've
-made a few adjustments to the data to make it more user-friendly. Now it is
-called `cars`:
+made a few adjustments to the data to make it more user-friendly. The original
+imperial columns are kept, and metric companion columns are added with
+`mutate()`. Now it is called `cars`:
 
 ```{r}
 glimpse(cars)
@@ -83,99 +86,87 @@ The main variables we will work with are:
 | Column | Type        | Description                          |
 |--------|-------------|--------------------------------------|
 | `car`  | text        | car name (added during setup)        |
-| `mpg`  | continuous  | miles per gallon (fuel efficiency)   |
-| `hp`   | continuous  | gross horsepower                     |
-| `wt`   | continuous  | weight in 1000 lb                    |
-| `disp` | continuous  | engine displacement in cubic inches  |
+| `consumption_l_100km` | continuous  | fuel consumption in L/100 km       |
+| `power_kw`            | continuous  | engine power in kilowatts          |
+| `weight_kg`           | continuous  | car weight in kilograms            |
+| `displacement_l`      | continuous  | engine displacement in litres      |
 | `cyl`  | categorical | number of cylinders (4, 6, or 8)     |
 | `gear` | categorical | number of forward gears (3, 4, or 5) |
 | `am`   | categorical | transmission (Automatic or Manual)   |
 
 ## Exercise 1: `select()`
 
-Pick a small set of columns that would be useful in a fuel-efficiency summary:
-`car`, `mpg`, `hp`, `wt`, and `am`.
+Pick a small set of columns that would be useful in a fuel-consumption summary:
+`car`, `consumption_l_100km`, `power_kw`, `weight_kg`, and `am`. Show the first
+six rows of the result.
 
 ```{r}
-cars %>%
-  select(car, mpg, hp, wt, am) %>%  # keep only these five columns, drop the rest
-  head()                             # show the first 6 rows (default)
+# Your code here
+
 ```
 
-Expected result: a 6-row table with only the requested five columns.
+Expected result: the first six rows of a table with only the requested five
+columns.
 
 Note: remember that `select()` changes columns, not rows.
 
 ## Exercise 2: `filter()`
 
-Find manual cars with more than 25 miles per gallon.
+Find manual cars with fuel consumption at or below 9 L/100 km.
 
 ```{r}
-manual_high_mpg <- cars %>%
-  filter(am == "Manual", mpg > 25)  # both conditions must be true: manual AND efficient
+# Your code here
 
-manual_high_mpg
 ```
 
 Expected result: a short table of efficient manual cars such as the Fiat 128,
-Honda Civic, and Lotus Europa.
+Honda Civic, Toyota Corolla, and Lotus Europa.
 
 Note: filtering is useful for plotting too — for example, you might want to
 show only 4-cylinder cars or focus on one treatment group.
 
 ## Exercise 3: `arrange()`
 
-Sort the data from highest to lowest fuel efficiency. If two cars have similar
-fuel efficiency, place the lighter car first.
+Sort the data from lowest to highest fuel consumption. If two cars have the same
+fuel consumption, place the lighter car first.
 
 ```{r}
-cars %>%
-  arrange(desc(mpg), wt) %>%  # desc() reverses order for mpg; wt stays ascending as tiebreaker
-  head(10)                     # show only the top 10 rows
+# Your code here
+
 ```
 
-Expected result: the most fuel-efficient cars appear first, with light cars
-breaking ties.
+Expected result: the cars with the lowest fuel consumption appear first, with
+lighter cars breaking exact ties.
 
-Note: you can mix `desc()` with regular ascending ordering inside the same
-`arrange()` call.
+Note: lower fuel consumption is better, so this task uses regular ascending
+order. For variables where larger is better, you can use `desc()` inside
+`arrange()`.
 
 ## Exercise 4: `mutate()`
 
 Create two new variables:
 
--   `power_to_weight` = `hp / wt`
--   `mpg_band` with values `"low"`, `"medium"`, and `"high"`
+-   `power_kw_per_tonne` = `power_kw / (weight_kg / 1000)`
+-   `consumption_band` with values `"low"`, `"medium"`, and `"high"`
 
-Use this rule for `mpg_band`:
+Use this rule for `consumption_band`:
 
--   `"high"` if `mpg >= 25`
--   `"medium"` if `mpg >= 18` and `< 25`
--   `"low"` otherwise
+-   `"low"` if `consumption_l_100km <= 8`
+-   `"medium"` if `consumption_l_100km <= 13`
+-   `"high"` otherwise
 
 `case_when()` checks conditions in order and returns the value for the first one
 that is true — like a series of if/else statements.
 
 ```{r}
-cars_augmented <- cars %>%
-  mutate(
-    power_to_weight = hp / wt,        # derived ratio: higher means more powerful for its weight
-    mpg_band = case_when(             # case_when works like a multi-condition if/else
-      mpg >= 25 ~ "high",             # first matching condition wins
-      mpg >= 18 ~ "medium",           # only reached if mpg < 25
-      TRUE ~ "low"                    # TRUE is the catch-all fallback (like else)
-    )
-  )
+# Your code here
 
-cars_augmented %>%
-  select(car, mpg, hp, wt, power_to_weight, mpg_band) %>%  # narrow down to relevant columns
-  head(10)
 ```
 
 Expected result: the output includes one continuous derived variable and one
 categorical variable.
 
-Note: creating categories like `mpg_band` is a natural bridge to plotting —
+Note: creating categories like `consumption_band` is a natural bridge to plotting —
 you will often use derived variables like this for colour or grouping.
 
 ## Exercise 5: `group_by()` + `summarise()`
@@ -183,17 +174,12 @@ you will often use derived variables like this for colour or grouping.
 Create a summary table by number of cylinders. Include:
 
 -   number of cars
--   mean `mpg`
--   mean `hp`
+-   mean `consumption_l_100km`
+-   mean `power_kw`
 
 ```{r}
-cars %>%
-  group_by(cyl) %>%          # split into groups: one per cylinder count (4, 6, 8)
-  summarise(
-    n_cars = n(),             # n() counts rows in each group
-    mean_mpg = mean(mpg),
-    mean_hp = mean(hp)
-  )
+# Your code here
+
 ```
 
 Expected result: one row each for 4, 6, and 8 cylinders.
@@ -213,18 +199,12 @@ Include:
 
 -   `am`
 -   `cyl`
--   mean `mpg`
--   mean `wt`
+-   mean `consumption_l_100km`
+-   mean `weight_kg`
 
 ```{r}
-summary_by_transmission <- cars %>%
-  group_by(am, cyl) %>%          # group by two variables: one row per unique am+cyl combination
-  summarise(
-    mean_mpg = mean(mpg),
-    mean_wt = mean(wt)
-  )
+# Your code here
 
-summary_by_transmission          # print the saved result
 ```
 
 Expected result: a compact summary table with one row per transmission and
@@ -241,12 +221,8 @@ category: engine shape. Convert it into a factor with readable labels.
 1: Straight
 
 ```{r}
-cars %>%
-  mutate(
-    vs = factor(vs, levels = c(0, 1), labels = c("V-shaped", "Straight"))
-  ) %>%
-  select(car, vs, cyl, mpg) %>%
-  head()
+# Your code here
+
 ```
 
 Expected result: the `vs` column now shows `"V-shaped"` or `"Straight"` instead

@@ -1,11 +1,8 @@
 ---
 title: "R Visualisation with ggplot2"
 author: "Priit Adler, Nurlan Kerimov"
-date: "2026-04-02"
+date: "2026-06-17"
 output: html_document
-editor_options:
-  markdown:
-    wrap: 80
 ---
 
 ```{r setup, include=FALSE}
@@ -20,6 +17,10 @@ opts_chunk$set(echo = TRUE, message = FALSE, warning = FALSE)
 cars <- mtcars %>%
   rownames_to_column(var = "car") %>%   # move row names (car models) into a real column
   mutate(
+    consumption_l_100km = round(235.214583 / mpg, 1),   # keep mpg, add fuel consumption in L/100 km
+    weight_kg = round(wt * 1000 * 0.45359237),          # keep wt, add weight in kg
+    power_kw = round(hp * 0.745699872, 1),              # keep hp, add power in kW
+    displacement_l = round(disp * 0.016387064, 1),      # keep disp, add engine displacement in litres
     cyl = factor(cyl),                  # treat cylinder count as a category, not a number
     gear = factor(gear),                # same for number of gears
     am = factor(am, levels = c(0, 1), labels = c("Automatic", "Manual"))  # give 0/1 readable labels
@@ -46,7 +47,7 @@ Before starting this session, learners should already be comfortable with:
 -   small table operations such as `select()`, `filter()`, `mutate()`,
     `group_by()`, and `summarise()`
 
-If you want a quick refresher on those ideas, use the `2026-04-02-R-warmup.Rmd`
+If you want a quick refresher on those ideas, use the `R-warmup.Rmd`
 document first.
 
 ## Data
@@ -57,7 +58,9 @@ Before making a chart, it helps to know what the rows represent and what kind of
 variables the columns contain.
 
 Throughout this course, we use a slightly modified version of the built-in
-`mtcars` dataset — see the `cars` dataframe below.
+`mtcars` dataset — see the `cars` dataframe below. The original imperial
+columns are kept, and metric companion columns are added with `mutate()` so the
+data remains traceable.
 
 ```{r}
 glimpse(cars)
@@ -65,9 +68,11 @@ glimpse(cars)
 
 The main variables we will reuse are:
 
--   `mpg`: miles per gallon
--   `wt`: car weight in 1000 lb
--   `hp`: horsepower
+-   `consumption_l_100km`: fuel consumption in litres per 100 km, derived from
+    `mpg`
+-   `weight_kg`: car weight in kilograms, derived from `wt`
+-   `power_kw`: engine power in kilowatts, derived from `hp`
+-   `displacement_l`: engine displacement in litres, derived from `disp`
 -   `cyl`, `gear`, and `am`: categories that are useful for grouping and colour
 
 Good plots start with understanding the dataset: what each row represents, which
@@ -81,7 +86,7 @@ raw `mtcars` table.
 Before we break a plot into parts, it helps to see one complete example.
 
 ```{r}
-ggplot(cars, aes(x = wt, y = mpg, color = am)) +
+ggplot(cars, aes(x = weight_kg, y = consumption_l_100km, color = am)) +
   geom_point(size = 3)
 ```
 
@@ -116,10 +121,10 @@ The `ggplot2` introduction describes a plot as seven composable parts:
 Here is how the first plot we saw maps to these grammar components:
 
 ```r
-ggplot(cars,                          # data
-       aes(x = wt, y = mpg,          # mapping
-           color = am)) +
-  geom_point(size = 3)               # layer (geom)
+ggplot(cars,                                                   # data
+       aes(x = weight_kg, y = consumption_l_100km, color = am) # mapping
+      ) + 
+  geom_point(size = 3)                                         # layer (geom)
 ```
 
 The remaining components — scales, labels, and theme — use sensible defaults
@@ -136,12 +141,13 @@ size, or another visual property. Common aesthetics include `x`, `y`, `color`,
 `fill`, `shape`, and `size`.
 
 ```{r}
-ggplot(cars, aes(x = wt, y = mpg, color = am)) +  # wt -> x, mpg -> y, am -> colour
+ggplot(cars, aes(x = weight_kg, y = consumption_l_100km, color = am)) + 
   geom_point(size = 3) +
   labs(color = "Transmission")  # labs() adds readable labels; we cover it in detail later
 ```
 
-Here, `wt` is mapped to the x-axis, `mpg` to the y-axis, and `am` to colour.
+Here, `weight_kg` is mapped to the x-axis, `consumption_l_100km` to the y-axis,
+and `am` to colour.
 
 In practice, mapping means asking questions like:
 
@@ -155,7 +161,7 @@ When an aesthetic belongs to the data, put it inside `aes()`. When you want a
 fixed value, set it outside `aes()`.
 
 ```{r}
-mapped_plot <- ggplot(cars, aes(x = wt, y = mpg, color = am)) +  # color inside aes() = data-driven
+mapped_plot <- ggplot(cars, aes(x = weight_kg, y = consumption_l_100km, color = am)) +  # color inside aes() = data-driven
   geom_point(size = 3) +
   labs(title = "Colour mapped to a variable", color = "Transmission")
 
@@ -163,7 +169,7 @@ mapped_plot
 ```
 
 ```{r}
-set_plot <- ggplot(cars, aes(x = wt, y = mpg)) +
+set_plot <- ggplot(cars, aes(x = weight_kg, y = consumption_l_100km)) +
   geom_point(size = 3, color = "steelblue") +  # color outside aes() = fixed value for all points
   labs(title = "Colour set to a fixed value")
 
@@ -173,19 +179,18 @@ set_plot
 You can also map more than one aesthetic at the same time.
 
 ```{r}
-ggplot(cars, aes(x = wt, y = mpg, color = am, shape = cyl)) +  # two aesthetics mapped at once
+ggplot(cars, aes(x = weight_kg, y = consumption_l_100km, color = am, shape = cyl)) +  # two aesthetics mapped at once
   geom_point(size = 3)
 ```
 
 ### Task
 
-Create a scatter plot of `disp` vs `hp`, map `color` to `cyl`, and set point
-size to `3`.
+Create a scatter plot of `displacement_l` vs `power_kw`, map `color` to `cyl`,
+and set point size to `3`.
 
 ```{r}
-ggplot(cars, aes(x = disp, y = hp, color = cyl)) +  # cyl mapped to color (inside aes)
-  geom_point(size = 3) +                             # size set to fixed value (outside aes)
-  labs(color = "Cylinders")                          # rename the colour legend
+# Your code here
+
 ```
 
 Expected result: a scatter plot where cylinder groups are distinguished by
@@ -211,7 +216,7 @@ Different geoms are useful for different variable types. With the same dataset,
 we can make several valid plots by changing only the geom.
 
 ```{r}
-scatter_geom <- ggplot(cars, aes(x = wt, y = mpg)) +
+scatter_geom <- ggplot(cars, aes(x = weight_kg, y = consumption_l_100km)) +
   geom_point(color = "steelblue", size = 3) +
   labs(title = "geom_point()")
 
@@ -219,7 +224,7 @@ scatter_geom
 ```
 
 ```{r}
-hist_geom <- ggplot(cars, aes(x = mpg)) +
+hist_geom <- ggplot(cars, aes(x = consumption_l_100km)) +
   geom_histogram(binwidth = 2, fill = "tomato", color = "white") +  # binwidth controls bar width; color is bar border
   labs(title = "geom_histogram()")
 
@@ -239,7 +244,7 @@ bar_geom
 ```
 
 ```{r}
-box_geom <- ggplot(cars, aes(x = cyl, y = mpg)) +
+box_geom <- ggplot(cars, aes(x = cyl, y = consumption_l_100km)) +
   geom_boxplot(fill = "khaki") +
   labs(title = "geom_boxplot()", x = "Cylinders")
 
@@ -247,16 +252,22 @@ box_geom
 ```
 
 ```{r}
-line_geom <- ggplot(cars %>% arrange(wt), aes(x = wt, y = mpg)) +
+line_geom <- ggplot(pressure, aes(x = temperature, y = pressure)) +
   geom_line(color = "steelblue", linewidth = 0.8) +
-  labs(title = "geom_line()")
+  labs(
+    title = "geom_line()",
+    x = "Temperature",
+    y = "Vapour pressure of mercury"
+  )
 
 line_geom
 ```
 
-`geom_line()` connects observations in the order they appear in the data. Here
-we first sort the data by weight with `arrange(wt)` so that the line runs from
-left to right. 
+`geom_line()` connects observations in x-axis order. It works best when the
+x-axis has a meaningful order, such as time, dose, temperature, or another
+ordered measurement. Here we use the built-in `pressure` dataset because it
+has an ordered temperature variable. This is a useful reminder that not every
+plot type fits every dataset equally well.
 
 As a rule of thumb:
 
@@ -271,31 +282,36 @@ As a rule of thumb:
 One of the strengths of `ggplot2` is that you can add more than one layer to the
 same plot.
 
-Lets check the difference between a line plot with and without points (as above):
-```{r}
-line_geom <- ggplot(cars %>% arrange(wt), aes(x = wt, y = mpg)) +
-  geom_line(color = "steelblue", linewidth = 0.8) +
-  geom_point(color = "steelblue", size = 2) + 
-  #Adding `geom_point()` on top makes individual cars visible.
-  labs(title = "geom_line()")
+Let's add points to the same line plot so the individual measurements are also
+visible:
 
-line_geom
+```{r}
+line_with_points <- ggplot(pressure, aes(x = temperature, y = pressure)) +
+  geom_line(color = "steelblue", linewidth = 0.8) +
+  geom_point(color = "steelblue", size = 2) +
+  labs(
+    title = "geom_line() with points",
+    x = "Temperature",
+    y = "Vapour pressure of mercury"
+  )
+
+line_with_points
 ```
 
 
 ### Box plot with jittered points
 
 ```{r}
-ggplot(cars, aes(x = gear, y = mpg)) +
+ggplot(cars, aes(x = gear, y = consumption_l_100km)) +
   geom_boxplot(fill = "grey85", outlier.shape = NA) +  # hide outlier dots so jitter shows all cars
   geom_jitter(aes(color = am), width = 0.15, size = 2.5, alpha = 0.85) +  # color = am only applies to this geom
-  labs(x = "Gears", y = "Miles per gallon", color = "Transmission") +
+  labs(x = "Gears", y = "Fuel consumption (L/100 km)", color = "Transmission") +
   theme_minimal()
 ```
 
 Note: Aesthetics defined in `ggplot(aes(...))` are inherited by every layer. However,
 each geom can add or override aesthetics in its own `aes()` call. In the example
-below, `x = gear` and `y = mpg` are shared by both layers, but only
+above, `x = gear` and `y = consumption_l_100km` are shared by both layers, but only
 `geom_jitter()` maps `color = am` — so the box plots stay a single colour while
 the points are coloured by transmission.
 
@@ -306,14 +322,14 @@ summary distribution for each gear group.
 ### Scatter plot with a trend line and labels
 
 ```{r}
-ggplot(cars, aes(x = wt, y = mpg)) +
+ggplot(cars, aes(x = weight_kg, y = consumption_l_100km)) +
   geom_point(aes(color = am), size = 3) +
   geom_smooth(method = "lm", se = FALSE, color = "black", linewidth = 0.8) +  # lm = linear trend line; se = FALSE hides confidence ribbon
   geom_text(
-    data = cars %>% filter(mpg > 30 | wt > 5),  # only label the extreme/interesting cars
+    data = cars %>% filter(consumption_l_100km < 8 | weight_kg > 2300),  # only label the extreme/interesting cars
     aes(label = car),
     check_overlap = TRUE,  # skip labels that would overlap each other
-    nudge_y = 1,           # shift labels slightly above their points
+    nudge_y = 0.5,           # shift labels slightly above their points
     size = 3
   ) +
   labs(color = "Transmission")
@@ -321,17 +337,15 @@ ggplot(cars, aes(x = wt, y = mpg)) +
 
 ### Task
 
-Build a plot of `hp` by `cyl` that combines `geom_boxplot()` and
+Build a plot of `power_kw` by `cyl` that combines `geom_boxplot()` and
 `geom_jitter()`. Colour the points by `gear`.
 
 ```{r}
-ggplot(cars, aes(x = cyl, y = hp)) +
-  geom_boxplot(fill = "grey85", outlier.shape = NA) +       # hide outlier dots; jitter will show all points
-  geom_jitter(aes(color = gear), width = 0.15, size = 2.5, alpha = 0.85) +  # color mapped per-geom, not inherited
-  labs(x = "Cylinders", y = "Horsepower", color = "Gears")
+# Your code here
+
 ```
 
-Expected result: a layered plot that shows both the horsepower distribution per
+Expected result: a layered plot that shows both the power distribution per
 cylinder group and the individual observations coloured by number of gears.
 
 ## Scales
@@ -345,7 +359,7 @@ us control breaks, labels, ordering, and colour palettes.
 Numeric scales are useful when you want cleaner breaks or more readable axes.
 
 ```{r}
-numeric_default <- ggplot(cars, aes(x = hp, y = mpg)) +
+numeric_default <- ggplot(cars, aes(x = power_kw, y = consumption_l_100km)) +
   geom_point(size = 3, color = "grey40") +
   labs(title = "Default numeric scales")
 
@@ -357,10 +371,10 @@ axes behave. The most common use is the `breaks` argument, which sets where the
 tick marks appear. Here we use `seq()` to generate evenly spaced positions.
 
 ```{r}
-numeric_scaled <- ggplot(cars, aes(x = hp, y = mpg)) +
+numeric_scaled <- ggplot(cars, aes(x = power_kw, y = consumption_l_100km)) +
   geom_point(size = 3, color = "grey40") +
-  scale_x_continuous(breaks = seq(50, 350, by = 50)) +  # seq() generates tick positions: 50, 100, 150 ...
-  scale_y_continuous(breaks = seq(10, 35, by = 5)) +
+  scale_x_continuous(breaks = seq(40, 260, by = 40)) +  # seq() generates tick positions: 40, 80, 120 ...
+  scale_y_continuous(breaks = seq(5, 25, by = 5)) +
   labs(title = "Custom numeric breaks")
 
 numeric_scaled
@@ -372,7 +386,7 @@ Ordering categories can change the story a plot tells. Here the first box plot
 uses the default factor order, while the second sets a new order manually.
 
 ```{r}
-default_order_plot <- ggplot(cars, aes(x = factor(cyl), y = mpg)) +
+default_order_plot <- ggplot(cars, aes(x = factor(cyl), y = consumption_l_100km)) +
   geom_boxplot(fill = "grey80") +
   labs(title = "Default order", x = "Cylinders")
 
@@ -380,7 +394,7 @@ default_order_plot
 ```
 
 ```{r}
-reordered_plot <- ggplot(cars, aes(x = factor(cyl, levels = c("8", "6", "4")), y = mpg)) +  # set the category order directly
+reordered_plot <- ggplot(cars, aes(x = factor(cyl, levels = c("8", "6", "4")), y = consumption_l_100km)) +  # set the category order directly
   geom_boxplot(fill = "tomato") +
   labs(title = "Manually reordered", x = "Cylinders")
 
@@ -396,7 +410,7 @@ You can also control discrete axes with `scale_x_discrete()`. The `limits`
 argument sets the order of categories, and the `labels` argument renames them.
 
 ```{r}
-ggplot(cars, aes(x = cyl, y = mpg)) +
+ggplot(cars, aes(x = cyl, y = consumption_l_100km)) +
   geom_boxplot(fill = "orchid") +
   scale_x_discrete(
     limits = c("8", "6", "4"),                       # set the display order
@@ -411,54 +425,65 @@ Use `color` for points and lines. Use `fill` for objects with an inside area,
 such as bars, tiles, and box plots.
 
 ```{r}
-color_scale_plot <- ggplot(cars, aes(x = wt, y = mpg, color = hp)) +
+color_scale_plot <- ggplot(cars, aes(x = weight_kg, y = consumption_l_100km, color = power_kw)) +
   geom_point(size = 4) +
-  scale_color_gradient(low = "skyblue", high = "firebrick") +  # low hp = blue, high hp = red
-  labs(title = "Continuous colour scale", color = "Horsepower")
+  scale_color_gradient(low = "skyblue", high = "firebrick") +  # low power = blue, high power = red
+  labs(title = "Continuous colour scale", color = "Power (kW)")
 
 color_scale_plot
 ```
 
+Continuous colour scales are for numeric variables. When colour represents
+categories, use a discrete colour scale. `scale_color_viridis_d()` is a useful
+default for categorical colour because it gives clearly separated colours.
+
 ```{r}
-mean_mpg_by_cyl_gear <- cars %>%
-  group_by(cyl, gear) %>%
-  summarise(mean_mpg = mean(mpg), .groups = "drop")  # .groups = "drop" removes grouping after summarise
+discrete_color_plot <- ggplot(cars, aes(x = weight_kg, y = consumption_l_100km, color = am)) +
+  geom_point(size = 3) +
+  scale_color_viridis_d() +
+  labs(title = "Discrete colour scale", color = "Transmission")
+
+discrete_color_plot
 ```
 
 ```{r}
-fill_scale_plot <- ggplot(mean_mpg_by_cyl_gear, aes(x = cyl, y = gear, fill = mean_mpg)) +
+mean_consumption_by_cyl_gear <- cars %>%
+  group_by(cyl, gear) %>%
+  summarise(mean_consumption = mean(consumption_l_100km), .groups = "drop")  # .groups = "drop" removes grouping after summarise
+```
+
+```{r}
+fill_scale_plot <- ggplot(mean_consumption_by_cyl_gear, aes(x = cyl, y = gear, fill = mean_consumption)) +
   geom_tile(color = "white", linewidth = 0.8) +                          # color here is the tile border, not fill
-  geom_text(aes(label = round(mean_mpg, 1)), color = "white", fontface = "bold") +  # overlay value labels on tiles
+  geom_text(aes(label = round(mean_consumption, 1)), color = "black", fontface = "bold") +  # overlay value labels on tiles
   scale_fill_gradient(low = "khaki1", high = "darkgreen") +
   labs(
     title = "Continuous fill scale",
     x = "Cylinders",
     y = "Gears",
-    fill = "Mean mpg"
+    fill = "Mean L/100 km"
   )
 
 fill_scale_plot
 ```
 
-Note: this section deliberately separates `scale_color_gradient()` and
-`scale_fill_gradient()` so you can see the correct use case for each one.
+Note: this section deliberately separates continuous colour, discrete colour,
+and fill scales so you can see the correct use case for each one.
 
 ### Task
 
-Create a scatter plot of `wt` versus `mpg` where `hp` is mapped to colour.
+Create a scatter plot of `weight_kg` versus `consumption_l_100km` where
+`power_kw` is mapped to colour.
 Use `scale_color_gradient()` to set a gradient from `"gold"` to `"purple"`,
-and set custom x-axis breaks at every 1000 lb with `scale_x_continuous()`.
+and set custom x-axis breaks at every 500 kg with `scale_x_continuous()`.
 
 ```{r}
-ggplot(cars, aes(x = wt, y = mpg, color = hp)) +
-  geom_point(size = 3) +
-  scale_color_gradient(low = "gold", high = "purple") +
-  scale_x_continuous(breaks = seq(1, 6, by = 1)) +
-  labs(color = "Horsepower", x = "Weight (1000 lb)", y = "Miles per gallon")
+# Your code here
+
 ```
 
 Expected result: a scatter plot with a gold-to-purple colour gradient and
-evenly spaced x-axis ticks.
+evenly spaced x-axis ticks in kilograms.
 
 ## Labels and titles
 
@@ -470,13 +495,13 @@ in earlier examples. Here is a closer look at what it can do.
 a plot.
 
 ```{r}
-ggplot(cars, aes(x = wt, y = mpg, color = am)) +
+ggplot(cars, aes(x = weight_kg, y = consumption_l_100km, color = am)) +
   geom_point(size = 3) +
   labs(
-    title = "Fuel efficiency and car weight",
-    subtitle = "Heavier cars tend to use more fuel",
-    x = "Weight (1000 lb)",
-    y = "Miles per gallon",
+    title = "Fuel consumption and car weight",
+    subtitle = "Heavier cars tend to consume more fuel",
+    x = "Weight (kg)",
+    y = "Fuel consumption (L/100 km)",
     color = "Transmission",
     caption = "Data source: mtcars"
   )
@@ -497,13 +522,13 @@ around the data, such as fonts, grid lines, legend position, and background
 appearance.
 
 ```{r}
-styled_plot <- ggplot(cars, aes(x = wt, y = mpg, color = am)) +
+styled_plot <- ggplot(cars, aes(x = weight_kg, y = consumption_l_100km, color = am)) +
   geom_point(size = 3) +
   labs(
-    title = "Heavier cars tend to have lower fuel efficiency",
+    title = "Heavier cars tend to consume more fuel",
     subtitle = "Transmission highlights one part of the pattern in mtcars",
-    x = "Weight (1000 lb)",
-    y = "Miles per gallon",
+    x = "Weight (kg)",
+    y = "Fuel consumption (L/100 km)",
     color = "Transmission"
   ) +
   theme_minimal(base_size = 12) +  # clean background; base_size scales all text proportionally
@@ -533,7 +558,7 @@ scatter_geom | hist_geom  # side by side
 ```
 
 ```{r}
-scatter_geom / box_geom  # stacked
+scatter_geom / hist_geom  # stacked
 ```
 
 You can combine both operators and add annotations to build more complex
@@ -546,7 +571,7 @@ dashboard_plot <- (styled_plot / (reordered_plot | fill_scale_plot)) +  # / stac
     subtitle = "Scatter plot, reordered box plot, and summary heatmap",
     caption = "Data source: mtcars"
   ) +
-  plot_layout(guides = "collect")  # merge duplicate legends into one shared legend
+  plot_layout(guides = "collect")  # place legends in one shared guide area
 
 dashboard_plot
 ```
@@ -572,7 +597,7 @@ When you make your own report, replace `tempfile()` with a real filename such as
 
 ## Final task
 
-Create a two-panel figure about fuel efficiency in `mtcars`.
+Create a two-panel figure about fuel consumption in `mtcars`.
 
 Requirements:
 
@@ -582,26 +607,8 @@ Requirements:
 -   add meaningful labels or a title
 
 ```{r}
-fuel_scatter <- ggplot(cars, aes(x = wt, y = mpg, color = hp)) +
-  geom_point(size = 3) +
-  scale_color_gradient(low = "lightblue", high = "darkred") +  # encodes a third variable (hp) through colour
-  labs(
-    title = "Fuel efficiency vs weight",
-    x = "Weight (1000 lb)",
-    y = "Miles per gallon",
-    color = "Horsepower"
-  )
+# Your code here
 
-fuel_boxplot <- ggplot(cars, aes(x = factor(cyl, levels = c("4", "6", "8")), y = mpg, fill = am)) +
-  geom_boxplot() +
-  labs(
-    title = "Fuel efficiency by cylinder count",
-    x = "Cylinders",
-    y = "Miles per gallon",
-    fill = "Transmission"
-  )
-
-fuel_scatter | fuel_boxplot  # combine the two panels side by side
 ```
 
 Expected result: a compact two-panel figure that uses both continuous and
@@ -609,3 +616,34 @@ categorical views of the same topic.
 
 Note: it is good practice to explain why you chose your scale and
 your plot types, not only how you coded them.
+
+## Advanced challenge: alternative dataset
+
+If you finish early, try the same visualisation workflow with a dataset loaded
+from a file. The `data/Islander_data.csv` file contains memory scores measured
+before and after a treatment.
+
+```{r}
+islanders <- readr::read_csv("data/Islander_data.csv")
+```
+
+Before plotting, prepare the data. Create useful extra columns such as:
+
+-   readable mood labels from `Happy_Sad_group`
+-   readable drug labels from `Drug`
+-   a readable dose label from `Dosage`
+-   an age group
+-   a checked or recalculated score-change column
+-   an improvement category based on score change
+
+Then create a figure with at least three plots. Your figure should:
+
+-   use the Islander dataset rather than `cars`
+-   show memory-score change in more than one way
+-   include both continuous and categorical views
+-   use readable labels, a theme, and at least one intentional scale choice
+-   combine the plots with `patchwork`
+
+There is no single correct answer here. The goal is to decide what
+transformations make the data easier to understand and then build a figure that
+communicates a clear story.
