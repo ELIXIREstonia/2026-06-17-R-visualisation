@@ -199,10 +199,6 @@ colour while point size stays fixed.
 Note: this task is useful for checking whether you understand the
 difference between mapping a variable and setting a constant.
 
-Additional reading:
-[ggplot2 geoms reference](https://ggplot2.tidyverse.org/reference/index.html#geoms),
-[From Data to Viz](https://data-to-viz.com/).
-
 ## Layers
 
 Layers are where the plot becomes visible. In `ggplot2`, a layer can include a
@@ -277,6 +273,10 @@ As a rule of thumb:
 -   use box plots when comparing a continuous variable across categories
 -   use line plots to show trends across an ordered variable
 
+Additional reading:
+[ggplot2 geoms reference](https://ggplot2.tidyverse.org/reference/index.html#geoms),
+[From Data to Viz](https://data-to-viz.com/).
+
 ### Adding more than one layer
 
 One of the strengths of `ggplot2` is that you can add more than one layer to the
@@ -324,7 +324,7 @@ summary distribution for each gear group.
 ```{r}
 ggplot(cars, aes(x = weight_kg, y = consumption_l_100km)) +
   geom_point(aes(color = am), size = 3) +
-  geom_smooth(method = "lm", se = FALSE, color = "black", linewidth = 0.8) +  # lm = linear trend line; se = FALSE hides confidence ribbon
+  geom_smooth(method = "lm", se = FALSE, color = "black", linetype = "dashed", linewidth = 0.5) +  # lm = linear trend line; se = FALSE hides confidence ribbon
   geom_text(
     data = cars %>% filter(consumption_l_100km < 8 | weight_kg > 2300),  # only label the extreme/interesting cars
     aes(label = car),
@@ -337,16 +337,19 @@ ggplot(cars, aes(x = weight_kg, y = consumption_l_100km)) +
 
 ### Task
 
-Build a plot of `power_kw` by `cyl` that combines `geom_boxplot()` and
+Build a plot of `power_kw` by `cyl` that combines `geom_violin()` and
 `geom_jitter()`. Colour the points by `gear`.
+
+You have not seen `geom_violin()` yet. Use the box plot examples as a pattern
+and adapt the geom.
 
 ```{r}
 # Your code here
 
 ```
 
-Expected result: a layered plot that shows both the power distribution per
-cylinder group and the individual observations coloured by number of gears.
+Expected result: a layered plot that shows the power distribution per cylinder
+group and the individual observations coloured by number of gears.
 
 ## Scales
 
@@ -518,7 +521,7 @@ Each argument in `labs()` targets a specific part of the plot:
 
 Polishing matters. A plot becomes easier to read when it has a clear title,
 useful axis labels, and a consistent theme. The theme controls the visual style
-around the data, such as fonts, grid lines, legend position, and background
+around the data, such as fonts, grid lines, text style, and background
 appearance.
 
 ```{r}
@@ -532,7 +535,10 @@ styled_plot <- ggplot(cars, aes(x = weight_kg, y = consumption_l_100km, color = 
     color = "Transmission"
   ) +
   theme_minimal(base_size = 12) +  # clean background; base_size scales all text proportionally
-  theme(legend.position = "top")   # move legend above the plot
+  theme(
+    plot.title = element_text(face = "bold"),  # make the title stand out
+    panel.grid.minor = element_blank()         # remove minor grid lines
+  )
 
 styled_plot
 ```
@@ -575,6 +581,19 @@ dashboard_plot <- (styled_plot / (reordered_plot | fill_scale_plot)) +  # / stac
 
 dashboard_plot
 ```
+
+## Figure size in R Markdown
+
+Chunk options can control how large a plot appears in the knitted R Markdown
+document. For example, `fig.width` and `fig.height` set the figure size in
+inches, while `dpi` controls the resolution used for raster output.
+
+```{r fig.width=12, fig.height=6, dpi=300}
+dashboard_plot
+```
+
+These options affect the plot in the rendered document. If you want to write a
+plot to a separate file, use `ggsave()`.
 
 ## Exporting plots with `ggsave()`
 

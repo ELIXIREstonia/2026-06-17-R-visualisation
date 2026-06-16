@@ -1,6 +1,6 @@
 # 2026-06-17-R-visualisation
 
-ELIXIR-EE training course on R, Rstudio and ggplot2 graphical grammar. Target to learners who have some experience with R and Rstudio and would like to learn the art of creating captivating images with ggplot2.
+ELIXIR-EE training course on R, RStudio, and the ggplot2 grammar of graphics. Targeted at learners who have some experience with R and RStudio and would like to learn how to create clear visualisations with ggplot2.
 
 The main document of the lecture is the [R-visualisation.Rmd](R-visualisation.Rmd) R markdown document. R markdown allows code (examples) and explanation / documentation to be in the same document in a nicely formatted, well structured manner.
 
@@ -13,13 +13,13 @@ Learning outcomes for the training:
 
 -   Students will be able to manipulate and transform data using the tidyverse packages (`dplyr`, `readr`, etc.), including filtering, grouping, summarizing, and mutating datasets to prepare them for analysis.
 
-2.  **Implement ggplot2 for Data Visualization**:
+2.  **Implement ggplot2 for Data Visualisation**:
 
--   Students will be able to construct complex and multi-layered visualizations using `ggplot2`, applying the principles of the Grammar of Graphics to create informative and aesthetically pleasing plots.
+-   Students will be able to construct complex and multi-layered visualisations using `ggplot2`, applying the principles of the Grammar of Graphics to create informative and aesthetically pleasing plots.
 
-3.  **Enhance Data Visualizations with Aesthetic Mapping**:
+3.  **Enhance Data Visualisations with Aesthetic Mapping**:
 
--   Students will be able to effectively map variables to various aesthetic properties in `ggplot2` plots, such as color, size, shape, and transparency, to add depth and clarity to their visualizations.
+-   Students will be able to effectively map variables to various aesthetic properties in `ggplot2` plots, such as colour, size, shape, and transparency, to add depth and clarity to their visualisations.
 
 4.  **Customize Plot Themes and Export High-Quality Graphics**:
 
