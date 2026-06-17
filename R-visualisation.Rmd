@@ -194,7 +194,7 @@ and set point size to `3`.
 ```
 
 Expected result: a scatter plot where cylinder groups are distinguished by
-colour while point size stays fixed.
+colour while the point size stays fixed.
 
 Note: this task is useful for checking whether you understand the
 difference between mapping a variable and setting a constant.
@@ -275,7 +275,7 @@ As a rule of thumb:
 
 Additional reading:
 [ggplot2 geoms reference](https://ggplot2.tidyverse.org/reference/index.html#geoms),
-[From Data to Viz](https://data-to-viz.com/).
+[From Data to Viz](https://www.data-to-viz.com/).
 
 ### Adding more than one layer
 
@@ -349,7 +349,7 @@ and adapt the geom.
 ```
 
 Expected result: a layered plot that shows the power distribution per cylinder
-group and the individual observations coloured by number of gears.
+group and the individual observations coloured by the number of gears.
 
 ## Scales
 
@@ -597,7 +597,7 @@ plot to a separate file, use `ggsave()`.
 
 ## Exporting plots with `ggsave()`
 
-`ggsave()` writes a plot to a file. In this example we save to temporary files
+`ggsave()` writes a plot to a file. In this example, we save to temporary files
 so that knitting the document does not clutter the course folder.
 
 ```{r}
