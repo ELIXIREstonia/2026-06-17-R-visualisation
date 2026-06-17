@@ -13,3 +13,7 @@ attendees, and trainers.
   explicit filenames once the rendering workflow is settled.
 - Consider adding a short note about `View()` and Cmd/Ctrl-click help navigation
   if there is time.
+- Add coords_cartesian(xlim = c(..)) for visible data dependent area scaling.
+- Could actually cover the facet_* functions -- there is time.
+- first complete plot might have more layers (labs, theme ?)
+- review used example colors how appropiate
